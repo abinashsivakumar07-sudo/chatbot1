@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CareerCraft — Career Development</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#181a1f;--accent:#14b8a6;--font:'Inter',sans-serif;}
+*{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:#172033;font-family:var(--font);transition:.2s}
+.shell{min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(16px,4vw,54px);background:rgba(255,255,255,.76);backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.08)}
+.brand{display:flex;align-items:center;gap:13px} .mark{width:48px;height:48px;display:grid;place-items:center;background:var(--accent);color:#fff;border-radius:15px;font-weight:800;box-shadow:0 10px 25px rgba(0,0,0,.12)} 
+h1{margin:0;font-size:clamp(19px,3vw,28px)} .domain{font-size:12px;opacity:.62;margin-top:2px} 
+button{font:600 14px var(--font);cursor:pointer;border:0} #clear{padding:10px 14px;border-radius:12px;background:#eef2f7;color:#273244}
+main{width:min(1050px,94vw);margin:clamp(18px,5vh,52px) auto;flex:1;display:flex;flex-direction:column}
+.hero{padding:4px 4px 18px;border-radius:6px}.hero h2{font-size:clamp(30px,6vw,56px);line-height:1.02;margin:0 0 10px;letter-spacing:-.05em} .hero p{max-width:720px;line-height:1.6;opacity:.68;margin:0}
+.chat{height:min(62vh,620px);overflow:auto;padding:22px;background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.08);border-radius:24px;box-shadow:0 22px 60px rgba(0,0,0,.09)}
+.msg{display:flex;margin:14px 0} .msg.user{justify-content:flex-end} .bubble{max-width:min(80%,700px);padding:13px 16px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:18px}
+.msg.assistant .bubble{background:#f1f5f9;border-bottom-left-radius:5px} .msg.user .bubble{background:var(--accent);color:#fff;border-bottom-right-radius:5px}
+.composer{display:flex;gap:10px;margin-top:14px;background:#fff;padding:10px;border-radius:20px;border:1px solid rgba(0,0,0,.08);box-shadow:0 14px 35px rgba(0,0,0,.08)}
+textarea{flex:1;resize:none;border:0;outline:0;min-height:46px;max-height:150px;padding:12px;background:transparent;font:500 15px var(--font)}
+#send{min-width:86px;border-radius:14px;background:var(--accent);color:#fff} #send:disabled{opacity:.55}
+.status{font-size:12px;opacity:.55;text-align:center;padding:8px}
+.typing{display:flex;gap:5px} .typing i{width:6px;height:6px;border-radius:50%;background:#64748b;animation:p 1s infinite} .typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s} @keyframes p{50%{opacity:.25;transform:translateY(-2px)}}
+@media(max-width:620px){header{padding:14px}main{width:96vw;margin:20px auto}.chat{height:58vh;padding:14px;border-radius:18px}.bubble{max-width:90%}.hero h2{font-size:34px}#send{min-width:64px}}
+</style></head>
+<body><div class="shell">
+<header><div class="brand"><div class="mark">CA</div><div><h1>CareerCraft</h1><div class="domain">Career Development</div></div></div><button id="clear">Clear chat</button></header>
+<main><section class="hero"><h2>CareerCraft</h2><p>Focused assistant for Career Development. Your conversation is temporary and tied to this browser session.</p></section>
+<section id="chat" class="chat" aria-live="polite"></section><div id="status" class="status">Ready</div>
+<form id="form" class="composer"><textarea id="input" rows="1" placeholder="Ask about Career Development..." aria-label="Message"></textarea><button id="send" type="submit">Send</button></form>
+</main></div>
+<script>
+const chat=document.querySelector('#chat'),form=document.querySelector('#form'),input=document.querySelector('#input'),send=document.querySelector('#send'),clearBtn=document.querySelector('#clear'),statusEl=document.querySelector('#status');
+const WELCOME="Welcome to CareerCraft. Ask me anything related to Career Development.";
+function add(role,text){const row=document.createElement('div');row.className='msg '+role;const b=document.createElement('div');b.className='bubble';b.textContent=text;row.appendChild(b);chat.appendChild(row);chat.scrollTop=chat.scrollHeight;}
+function typing(){const row=document.createElement('div');row.id='typing';row.className='msg assistant';row.innerHTML='<div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div>';chat.appendChild(row);chat.scrollTop=chat.scrollHeight;}
+async function load(){try{const r=await fetch('/api/history');const d=await r.json();chat.innerHTML='';if(!d.messages.length)add('assistant',WELCOME);else d.messages.forEach(m=>add(m.role==='user'?'user':'assistant',m.content));}catch(e){add('assistant',WELCOME);}}
+form.addEventListener('submit',async e=>{e.preventDefault();const text=input.value.trim();if(!text)return;add('user',text);input.value='';input.style.height='auto';send.disabled=true;statusEl.textContent='Thinking…';typing();try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});const d=await r.json();document.querySelector('#typing')?.remove();if(!r.ok)throw new Error(d.error||'Request failed');add('assistant',d.reply);statusEl.textContent='Ready';}catch(err){document.querySelector('#typing')?.remove();add('assistant','Sorry, something went wrong. '+err.message);statusEl.textContent='Error';}finally{send.disabled=false;input.focus();}});
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
+input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,150)+'px';});
+clearBtn.addEventListener('click',async()=>{await fetch('/api/clear',{method:'POST'});chat.innerHTML='';add('assistant',WELCOME);statusEl.textContent='Chat cleared';input.focus();});
+load();input.focus();
+</script></body></html>
